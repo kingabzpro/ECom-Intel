@@ -1,0 +1,7 @@
+streamlit
+openai
+firecrawl-py
+pandas
+plotly
+python-dotenv
+requests

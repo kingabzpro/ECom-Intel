@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__firecrawl__firecrawl_search",
+      "WebSearch",
+      "mcp__firecrawl__firecrawl_scrape",
+      "WebFetch(domain:www.firecrawl.dev)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:docs.firecrawl.dev)",
+      "Bash(dir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
