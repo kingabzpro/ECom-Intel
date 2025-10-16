@@ -2,6 +2,9 @@
 
 A powerful Python application that analyzes product reviews using Firecrawl for web scraping and OpenAI GPT-4o-mini for AI-powered insights. Features a beautiful Streamlit dashboard with caching capabilities.
 
+<img width="1805" height="804" alt="image" src="https://github.com/user-attachments/assets/cc80c734-d041-48d1-af95-90ebda530dda" />
+
+
 ## ✨ Features
 
 - **🌐 Web Scraping**: Uses Firecrawl to search and scrape product reviews from multiple sources
@@ -10,6 +13,8 @@ A powerful Python application that analyzes product reviews using Firecrawl for 
 - **📊 Interactive Dashboard**: Beautiful Streamlit interface with charts and visualizations
 - **⚡ Real-time Progress**: Live tracking of scraping and analysis progress
 - **🔍 Smart Insights**: Extracts pros, cons, key themes, and actionable recommendations
+
+
 
 ## 🛠️ Installation
 
