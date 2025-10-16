@@ -1,12 +1,9 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import time
-import re
 from urllib.parse import urlparse
-import os
+
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
 
 from database import ReviewDatabase
 from firecrawl_client import FirecrawlClient
@@ -17,11 +14,12 @@ st.set_page_config(
     page_title="ECom Intel - Product Review Analyzer",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Custom CSS for better styling
-st.markdown("""
+st.markdown(
+    """
 <style>
     .main-header {
         font-size: 2.5rem;
@@ -57,68 +55,80 @@ st.markdown("""
         margin: 0.5rem 0;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
+
 
 def validate_url(url: str) -> bool:
     """Validate if the URL is properly formatted."""
     try:
         result = urlparse(url)
         return all([result.scheme, result.netloc])
-    except:
+    except Exception:
         return False
+
 
 def extract_product_name(url: str) -> str:
     """Extract product name from URL."""
     try:
         parsed = urlparse(url)
-        path_parts = [part for part in parsed.path.split('/') if part and len(part) > 2]
+        path_parts = [part for part in parsed.path.split("/") if part and len(part) > 2]
         if path_parts:
-            return path_parts[-1].replace('-', ' ').replace('_', ' ').title()
+            return path_parts[-1].replace("-", " ").replace("_", " ").title()
         return "Unknown Product"
-    except:
+    except Exception:
         return "Unknown Product"
+
 
 def create_sentiment_chart(sentiment_data: dict) -> go.Figure:
     """Create sentiment distribution pie chart."""
-    fig = go.Figure(data=[go.Pie(
-        labels=list(sentiment_data.keys()),
-        values=list(sentiment_data.values()),
-        hole=0.3,
-        marker_colors=['#00cc96', '#ff6692', '#636efa']
-    )])
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=list(sentiment_data.keys()),
+                values=list(sentiment_data.values()),
+                hole=0.3,
+                marker_colors=["#00cc96", "#ff6692", "#636efa"],
+            )
+        ]
+    )
     fig.update_layout(
-        title="Sentiment Distribution",
-        font=dict(size=14),
-        showlegend=True,
-        height=400
+        title="Sentiment Distribution", font=dict(size=14), showlegend=True, height=400
     )
     return fig
 
+
 def create_rating_chart(rating_data: dict) -> go.Figure:
     """Create rating distribution bar chart."""
-    ratings = ['5★', '4★', '3★', '2★', '1★']
+    ratings = ["5★", "4★", "3★", "2★", "1★"]
     values = [
-        rating_data.get('5_star', 0),
-        rating_data.get('4_star', 0),
-        rating_data.get('3_star', 0),
-        rating_data.get('2_star', 0),
-        rating_data.get('1_star', 0)
+        rating_data.get("5_star", 0),
+        rating_data.get("4_star", 0),
+        rating_data.get("3_star", 0),
+        rating_data.get("2_star", 0),
+        rating_data.get("1_star", 0),
     ]
 
-    fig = go.Figure(data=[go.Bar(
-        x=ratings,
-        y=values,
-        marker_color=['#00cc96', '#00cc96', '#ffab00', '#ff6692', '#ff6692'],
-        text=[f'{v}%' for v in values],
-        textposition='auto'
-    )])
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=ratings,
+                y=values,
+                marker_color=["#00cc96", "#00cc96", "#ffab00", "#ff6692", "#ff6692"],
+                text=[f"{v}%" for v in values],
+                textposition="auto",
+            )
+        ]
+    )
     fig.update_layout(
         title="Rating Distribution",
         xaxis_title="Rating",
         yaxis_title="Percentage (%)",
-        height=400
+        height=400,
     )
     return fig
+
 
 def main():
     # Initialize components
@@ -128,22 +138,29 @@ def main():
         analyzer = ReviewAnalyzer()
     except Exception as e:
         st.error(f"⚠️ **Initialization Error**: {str(e)}")
-        st.error("Please check your environment variables and API keys in the `.env` file.")
+        st.error(
+            "Please check your environment variables and API keys in the `.env` file."
+        )
         return
 
     # Header
-    st.markdown('<h1 class="main-header">🔍 ECom Intel - Product Review Analyzer</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<h1 class="main-header">🔍 ECom Intel - Product Review Analyzer</h1>',
+        unsafe_allow_html=True,
+    )
     st.markdown("---")
 
     # Sidebar
     st.sidebar.title("🚀 Analysis Settings")
-    st.sidebar.markdown("Enter a product URL to analyze customer reviews and get AI-powered insights.")
+    st.sidebar.markdown(
+        "Enter a product URL to analyze customer reviews and get AI-powered insights."
+    )
 
     # URL Input
     product_url = st.sidebar.text_input(
         "Product URL",
         placeholder="https://www.amazon.com/dp/PRODUCT_ID",
-        help="Enter the URL of the product you want to analyze"
+        help="Enter the URL of the product you want to analyze",
     )
 
     # Analysis options
@@ -171,11 +188,11 @@ def main():
                 # Try to find existing product in database
                 recent_products = db.get_recent_products(50)
                 for product in recent_products:
-                    if product['url'] == product_url:
-                        cached_analysis = db.get_analysis(product['id'])
+                    if product["url"] == product_url:
+                        cached_analysis = db.get_analysis(product["id"])
                         if cached_analysis:
-                            product_info = db.get_product_info(product['id'])
-                            reviews = db.get_reviews(product['id'])
+                            product_info = db.get_product_info(product["id"])
+                            reviews = db.get_reviews(product["id"])
                             break
 
         if cached_analysis:
@@ -200,7 +217,9 @@ def main():
                 reviews = firecrawl_client.get_product_reviews(product_url, max_pages)
 
                 if not reviews:
-                    st.error("❌ No reviews found for this product. Please try a different URL.")
+                    st.error(
+                        "❌ No reviews found for this product. Please try a different URL."
+                    )
                     return
 
                 status_text.text(f"📊 Found {len(reviews)} reviews")
@@ -216,8 +235,7 @@ def main():
                 progress_bar.progress(90)
 
                 product_id = db.get_or_create_product(
-                    url=product_url,
-                    title=product_name
+                    url=product_url, title=product_name
                 )
                 db.add_reviews(product_id, reviews)
                 db.save_analysis(product_id, analysis_result)
@@ -243,29 +261,40 @@ def main():
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Total Reviews", analysis_result['total_reviews'])
+            st.metric("Total Reviews", analysis_result["total_reviews"])
         with col2:
             st.metric("Average Rating", f"{analysis_result['average_rating']}/5.0")
         with col3:
-            st.metric("Positive Sentiment", f"{analysis_result['sentiment_distribution']['positive']}%")
+            st.metric(
+                "Positive Sentiment",
+                f"{analysis_result['sentiment_distribution']['positive']}%",
+            )
         with col4:
-            st.metric("Negative Sentiment", f"{analysis_result['sentiment_distribution']['negative']}%")
+            st.metric(
+                "Negative Sentiment",
+                f"{analysis_result['sentiment_distribution']['negative']}%",
+            )
 
         # Charts
         col1, col2 = st.columns(2)
         with col1:
-            fig_sentiment = create_sentiment_chart(analysis_result['sentiment_distribution'])
-            st.plotly_chart(fig_sentiment, use_container_width=True)
+            fig_sentiment = create_sentiment_chart(
+                analysis_result["sentiment_distribution"]
+            )
+            st.plotly_chart(fig_sentiment, width="stretch")
         with col2:
-            fig_rating = create_rating_chart(analysis_result['rating_summary'])
-            st.plotly_chart(fig_rating, use_container_width=True)
+            fig_rating = create_rating_chart(analysis_result["rating_summary"])
+            st.plotly_chart(fig_rating, width="stretch")
 
         # Key Insights
         st.markdown("---")
         st.header("💡 Key Insights")
-        if analysis_result['key_insights']:
-            for insight in analysis_result['key_insights']:
-                st.markdown(f'<div class="insight-box">• {insight}</div>', unsafe_allow_html=True)
+        if analysis_result.get("key_insights"):
+            for insight in analysis_result.get("key_insights", []):
+                st.markdown(
+                    f'<div class="insight-box">• {insight}</div>',
+                    unsafe_allow_html=True,
+                )
         else:
             st.info("No key insights available")
 
@@ -273,26 +302,34 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("✅ What Customers Love")
-            if analysis_result['pros']:
-                for pro in analysis_result['pros']:
-                    st.markdown(f'<div class="insight-box">✓ {pro}</div>', unsafe_allow_html=True)
+            if analysis_result.get("pros"):
+                for pro in analysis_result.get("pros", []):
+                    st.markdown(
+                        f'<div class="insight-box">✓ {pro}</div>',
+                        unsafe_allow_html=True,
+                    )
             else:
                 st.info("No positive feedback identified")
 
         with col2:
             st.subheader("⚠️ Common Complaints")
-            if analysis_result['cons']:
-                for con in analysis_result['cons']:
-                    st.markdown(f'<div class="warning-box">⚠ {con}</div>', unsafe_allow_html=True)
+            if analysis_result.get("cons"):
+                for con in analysis_result.get("cons", []):
+                    st.markdown(
+                        f'<div class="warning-box">⚠ {con}</div>',
+                        unsafe_allow_html=True,
+                    )
             else:
                 st.info("No negative feedback identified")
 
         # Recommendations
-        if analysis_result['recommendations']:
+        if analysis_result.get("recommendations"):
             st.markdown("---")
             st.header("🎯 Recommendations")
-            for rec in analysis_result['recommendations']:
-                st.markdown(f'<div class="insight-box">💡 {rec}</div>', unsafe_allow_html=True)
+            for rec in analysis_result.get("recommendations", []):
+                st.markdown(
+                    f'<div class="insight-box">💡 {rec}</div>', unsafe_allow_html=True
+                )
 
         # Recent Reviews Sample
         if reviews:
@@ -301,20 +338,24 @@ def main():
             sample_reviews = reviews[:5]  # Show first 5 reviews
 
             for i, review in enumerate(sample_reviews, 1):
-                with st.expander(f"Review {i} - Rating: {review.get('rating', 'N/A')}/5"):
+                with st.expander(
+                    f"Review {i} - Rating: {review.get('rating', 'N/A')}/5"
+                ):
                     st.write(f"**Review:** {review.get('review_text', 'N/A')}")
-                    if review.get('reviewer_name'):
+                    if review.get("reviewer_name"):
                         st.write(f"**Reviewer:** {review.get('reviewer_name')}")
-                    if review.get('review_date'):
+                    if review.get("review_date"):
                         st.write(f"**Date:** {review.get('review_date')}")
-                    if review.get('sentiment_label'):
-                        sentiment = review.get('sentiment_label', 'neutral')
+                    if review.get("sentiment_label"):
+                        sentiment = review.get("sentiment_label", "neutral")
                         sentiment_color = {
-                            'positive': '🟢',
-                            'negative': '🔴',
-                            'neutral': '🟡'
-                        }.get(sentiment, '⚪')
-                        st.write(f"**Sentiment:** {sentiment_color} {sentiment.title()}")
+                            "positive": "🟢",
+                            "negative": "🔴",
+                            "neutral": "🟡",
+                        }.get(sentiment, "⚪")
+                        st.write(
+                            f"**Sentiment:** {sentiment_color} {sentiment.title()}"
+                        )
 
     # Recent Analyses
     st.markdown("---")
@@ -323,22 +364,31 @@ def main():
     recent_products = db.get_recent_products(10)
     if recent_products:
         df = pd.DataFrame(recent_products)
-        df['average_rating'] = df['average_rating'].round(2)
-        display_df = df[['title', 'brand', 'total_reviews', 'average_rating', 'created_at']]
-        display_df.columns = ['Product', 'Brand', 'Reviews', 'Rating', 'Analyzed']
-        display_df['Analyzed'] = pd.to_datetime(display_df['Analyzed']).dt.strftime('%Y-%m-%d %H:%M')
-        st.dataframe(display_df, use_container_width=True)
+        df = df.copy()
+        df.loc[:, "average_rating"] = df["average_rating"].round(2)
+        display_df = df[
+            ["title", "brand", "total_reviews", "average_rating", "created_at"]
+        ]
+        display_df.columns = ["Product", "Brand", "Reviews", "Rating", "Analyzed"]
+        display_df.loc[:, "Analyzed"] = pd.to_datetime(
+            display_df["Analyzed"]
+        ).dt.strftime("%Y-%m-%d %H:%M")
+        st.dataframe(display_df, width="stretch")
     else:
         st.info("No recent analyses found. Start by analyzing a product!")
 
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
     <div style='text-align: center; color: #666; padding: 20px;'>
         <p>ECom Intel - Powered by Firecrawl & OpenAI GPT-4o-mini</p>
         <p>Analyze product reviews to get AI-powered insights and recommendations</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
+
 
 if __name__ == "__main__":
     main()
